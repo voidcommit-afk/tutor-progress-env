@@ -21,3 +21,6 @@ class StepResult(BaseModel):
     reward: float
     done: bool
     info: dict
+
+class ResetRequest(BaseModel):
+    task_id: str
