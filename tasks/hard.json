@@ -1,0 +1,62 @@
+[
+  {
+    "task_id": "hard_1",
+    "difficulty": "hard",
+    "chat_history": [
+      "I understand concepts but fail in exams",
+      "I run out of time solving numericals"
+    ],
+    "constraints": {
+      "exam_in_days": 5,
+      "time_per_day": "2 hours"
+    },
+    "expected": {
+      "issues": ["time management", "numericals"],
+      "plan_features": [
+        "timed practice",
+        "prioritization",
+        "mock tests"
+      ]
+    }
+  },
+  {
+    "task_id": "hard_2",
+    "difficulty": "hard",
+    "chat_history": [
+      "I study everything but don’t improve",
+      "I don’t know what to focus on"
+    ],
+    "constraints": {
+      "exam_in_days": 7,
+      "time_per_day": "3 hours"
+    },
+    "expected": {
+      "issues": ["lack of focus", "inefficient study"],
+      "plan_features": [
+        "topic prioritization",
+        "revision cycles",
+        "practice questions"
+      ]
+    }
+  },
+  {
+    "task_id": "hard_3",
+    "difficulty": "hard",
+    "chat_history": [
+      "I get stuck on difficult questions",
+      "I waste too much time on one problem"
+    ],
+    "constraints": {
+      "exam_in_days": 3,
+      "time_per_day": "2 hours"
+    },
+    "expected": {
+      "issues": ["time waste", "problem selection"],
+      "plan_features": [
+        "time limits",
+        "skip strategy",
+        "mixed practice"
+      ]
+    }
+  }
+]

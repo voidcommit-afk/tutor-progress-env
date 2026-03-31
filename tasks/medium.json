@@ -1,0 +1,38 @@
+[
+  {
+    "task_id": "medium_1",
+    "difficulty": "medium",
+    "chat_history": [
+      "I understand theory but fail numericals",
+      "Force problems confuse me"
+    ],
+    "expected": {
+      "weaknesses": ["numericals", "force"],
+      "pattern": ["theory", "application gap"]
+    }
+  },
+  {
+    "task_id": "medium_2",
+    "difficulty": "medium",
+    "chat_history": [
+      "I study but forget everything in exams",
+      "I panic and blank out"
+    ],
+    "expected": {
+      "weaknesses": ["memory", "exam anxiety"],
+      "pattern": ["retention issue", "pressure"]
+    }
+  },
+  {
+    "task_id": "medium_3",
+    "difficulty": "medium",
+    "chat_history": [
+      "I keep making mistakes in algebra",
+      "My steps go wrong"
+    ],
+    "expected": {
+      "weaknesses": ["algebra", "calculation errors"],
+      "pattern": ["careless mistakes", "process issue"]
+    }
+  }
+]

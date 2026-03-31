@@ -1,0 +1,21 @@
+from pydantic import BaseModel
+from typing import List, Optional
+
+
+class Observation(BaseModel):
+    task_id: str
+    difficulty: str
+    chat_history: List[str]
+    constraints: Optional[dict] = None
+
+
+class Action(BaseModel):
+    type: str
+    content: str
+
+
+class StepResult(BaseModel):
+    observation: Observation
+    reward: float
+    done: bool
+    info: dict

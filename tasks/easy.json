@@ -1,0 +1,38 @@
+[
+  {
+    "task_id": "easy_1",
+    "difficulty": "easy",
+    "chat_history": [
+      "I don't understand photosynthesis",
+      "What is chlorophyll?"
+    ],
+    "expected": {
+      "concepts": ["photosynthesis", "chlorophyll"],
+      "summary_points": ["confusion", "basics"]
+    }
+  },
+  {
+    "task_id": "easy_2",
+    "difficulty": "easy",
+    "chat_history": [
+      "What is Newton's first law?",
+      "I keep forgetting inertia"
+    ],
+    "expected": {
+      "concepts": ["newton", "inertia"],
+      "summary_points": ["memory issue", "basic physics"]
+    }
+  },
+  {
+    "task_id": "easy_3",
+    "difficulty": "easy",
+    "chat_history": [
+      "I don't get fractions",
+      "How do I divide 1/2 by 1/4?"
+    ],
+    "expected": {
+      "concepts": ["fractions", "division"],
+      "summary_points": ["basic math confusion"]
+    }
+  }
+]
