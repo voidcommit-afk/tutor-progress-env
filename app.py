@@ -18,6 +18,14 @@ tasks_hard = json.load(open("tasks/hard.json"))
 ALL_TASKS = tasks_easy + tasks_medium + tasks_hard
 env = TutorEnv(ALL_TASKS)
 
+@app.get("/")
+def root():
+    return {
+        "env": "TutorProgressEnv",
+        "status": "running",
+        "endpoints": ["/tasks", "/reset", "/step", "/grader", "/baseline"]
+    }
+
 
 @app.get("/tasks")
 def get_tasks():
