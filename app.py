@@ -40,8 +40,14 @@ def get_tasks():
 
 
 @app.post("/reset")
-def reset(task_id: str):
+def reset(body: dict):
+    task_id = body.get("task_id")
+
+    if not task_id:
+        return {"error": "task_id required"}
+
     task = next(t for t in ALL_TASKS if t["task_id"] == task_id)
+
     return env.reset(task)
 
 
