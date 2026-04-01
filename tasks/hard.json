@@ -12,6 +12,7 @@
     },
     "expected": {
       "issues": ["time management", "numericals"],
+      "must_include": ["time", "mock"],
       "plan_features": [
         "timed practice",
         "prioritization",
@@ -32,6 +33,7 @@
     },
     "expected": {
       "issues": ["lack of focus", "inefficient study"],
+      "must_include": ["focus", "priorit"],
       "plan_features": [
         "topic prioritization",
         "revision cycles",
@@ -52,6 +54,7 @@
     },
     "expected": {
       "issues": ["time waste", "problem selection"],
+      "must_include": ["time", "skip"],
       "plan_features": [
         "time limits",
         "skip strategy",

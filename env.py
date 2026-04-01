@@ -60,7 +60,11 @@ class TutorEnv:
         elif action.type == "final_answer":
             output = action.content
 
-            result = compute_reward(output, self.current["expected"])
+            result = compute_reward(
+                output,
+                self.current["expected"],
+                constraints=self.current.get("constraints")
+            )
 
             obs = Observation(
                 task_id=self.current["task_id"],

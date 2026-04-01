@@ -73,7 +73,7 @@ def state():
 def grader(output: str, task_id: str):
     task = next(t for t in ALL_TASKS if t["task_id"] == task_id)
     from grader import grade
-    return {"score": grade(output, task["expected"])}
+    return {"score": grade(output, task["expected"], constraints=task.get("constraints"))}
 
 @app.get("/baseline")
 def baseline():

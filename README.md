@@ -40,6 +40,32 @@ state() → current state
 
 ---
 
+### Action / Observation Schemas
+
+**Observation**
+
+```json
+{
+  "task_id": "string",
+  "difficulty": "easy|medium|hard",
+  "chat_history": ["..."],
+  "constraints": { "exam_in_days": 5, "time_per_day": "2 hours" },
+  "step_count": 0
+}
+```
+
+**Action**
+
+```json
+{
+  "type": "tool|final_answer",
+  "content": "string",
+  "tool_name": "extract_concepts|detect_weakness (optional)"
+}
+```
+
+---
+
 ### Tasks
 
 Three difficulty levels:
@@ -102,10 +128,7 @@ Breakdown includes:
 
 ### Baseline
 
-A simple 2-step agent:
-
-1. Uses tool (`extract_concepts`)
-2. Produces structured answer
+The baseline inference script uses the OpenAI client to generate a deterministic response (temperature=0) for every task.
 
 Example performance:
 
@@ -114,6 +137,54 @@ easy:   ~0.6–0.8
 medium: ~0.5–0.7  
 hard:   ~0.4–0.6  
 ```
+
+---
+
+### Setup
+
+Required environment variables for inference:
+
+```text
+API_BASE_URL   # API endpoint for the LLM provider (required by checklist)
+MODEL_NAME     # Model identifier
+OPENAI_API_KEY # OpenAI-compatible API key
+HF_TOKEN       # Hugging Face token for Space deployment
+```
+
+Optional mock mode (no external API calls):
+
+```text
+MOCK_INFERENCE=1
+```
+
+Run baseline inference:
+
+```bash
+python inference.py
+```
+
+Run OpenEnv validation:
+
+```bash
+openenv validate
+```
+
+---
+
+### Hugging Face Space Deployment
+
+1. Build and run locally:
+
+```bash
+docker build -t tutor-progress-env .
+docker run -p 7860:7860 tutor-progress-env
+```
+
+2. Create a Docker Space on Hugging Face and set:
+   - `HF_TOKEN`
+   - `API_BASE_URL`
+   - `MODEL_NAME`
+   - `OPENAI_API_KEY`
 
 ---
 
