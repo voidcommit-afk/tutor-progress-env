@@ -97,9 +97,12 @@ export ENV_SEED=42
 ```bash
 export API_BASE_URL=<provider_base_url>
 export MODEL_NAME=<chat_model_name>
-export OPENAI_API_KEY=<provider_api_key>
+export API_KEY=<provider_api_key>
 export ENV_SEED=42
 ```
+
+Compatibility fallback also supported:
+- `OPENAI_API_KEY` (if `API_KEY` is not set)
 
 Example Groq-compatible base URL:
 - `https://api.groq.com/openai/v1`

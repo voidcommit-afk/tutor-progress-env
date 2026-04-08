@@ -1,5 +1,8 @@
 import json
 import os
+import urllib.error
+import urllib.parse
+import urllib.request
 from env import TutorEnv
 from schemas import Action
 
@@ -32,6 +35,40 @@ def _mock_output(task, constraints):
     return "\n".join([summary, diagnosis, plan, constraints_line])
 
 
+def _chat_completions_url(api_base_url: str) -> str:
+    base = (api_base_url or "").rstrip("/")
+    if base.endswith("/chat/completions"):
+        return base
+    return base + "/chat/completions"
+
+
+def _call_chat_completion_raw(api_base_url: str, api_key: str, model_name: str, prompt: str) -> str:
+    url = _chat_completions_url(api_base_url)
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": "Respond in four labeled lines: Summary:, Diagnosis:, Plan:, Constraints:."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0,
+        "max_tokens": 256,
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url=url,
+        data=data,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        body = resp.read().decode("utf-8")
+    parsed = json.loads(body)
+    return ((parsed.get("choices") or [{}])[0].get("message") or {}).get("content", "").strip()
+
+
 def main():
     tasks = load_tasks()
     seed = int(os.getenv("ENV_SEED", "42"))
@@ -44,28 +81,45 @@ def main():
 
     env = TutorEnv(tasks, seed=seed)
 
-    api_base_url = os.getenv("API_BASE_URL")
-    model_name = os.getenv("MODEL_NAME")
-    api_key = os.getenv("OPENAI_API_KEY")
+    # Hackathon validator injects API_BASE_URL + API_KEY.
+    # Prefer those names first to ensure calls are routed through the required proxy.
+    api_base_url = os.getenv("API_BASE_URL") or os.getenv("OPENAI_BASE_URL")
+    api_key = os.getenv("API_KEY") or os.getenv("OPENAI_API_KEY")
+    model_name = (
+        os.getenv("MODEL_NAME")
+        or os.getenv("OPENAI_MODEL")
+        or os.getenv("MODEL")
+        or "gpt-4o-mini"
+    )
+
     mock_inference = os.getenv("MOCK_INFERENCE", "").lower() in {"1", "true", "yes", "on"}
+    proxy_mode = bool(os.getenv("API_BASE_URL") and os.getenv("API_KEY"))
     missing = [k for k, v in {
         "API_BASE_URL": api_base_url,
-        "MODEL_NAME": model_name,
-        "OPENAI_API_KEY": api_key,
+        "API_KEY": api_key,
     }.items() if not v]
 
+    # If proxy vars are injected, always use API path (validator expects at least one proxied call).
+    if proxy_mode and mock_inference:
+        print("[WARN] Ignoring MOCK_INFERENCE because API_BASE_URL/API_KEY proxy vars are present.", flush=True)
+        mock_inference = False
+
     use_api = (not mock_inference) and (len(missing) == 0)
-    if missing and not mock_inference:
+    if missing and not mock_inference and not proxy_mode:
         print(f"[WARN] Missing env vars {missing}; falling back to MOCK_INFERENCE mode.")
+    elif use_api:
+        print(f"[INFO] Using proxied API mode via {api_base_url} with model={model_name}", flush=True)
 
     client = None
+    client_mode = None
     if use_api:
         try:
             from openai import OpenAI
             client = OpenAI(api_key=api_key, base_url=api_base_url)
+            client_mode = "openai"
         except Exception as e:
-            print(f"[WARN] Failed to initialize OpenAI client ({e}); using MOCK_INFERENCE mode.")
-            use_api = False
+            print(f"[WARN] OpenAI SDK unavailable ({e}); using raw HTTP proxy mode.", flush=True)
+            client_mode = "raw"
 
     results = {}
 
@@ -87,18 +141,21 @@ def main():
         )
 
         output = None
-        if use_api and client is not None:
+        if use_api:
             try:
-                completion = client.chat.completions.create(
-                    model=model_name,
-                    messages=[
-                        {"role": "system", "content": "Respond in four labeled lines: Summary:, Diagnosis:, Plan:, Constraints:."},
-                        {"role": "user", "content": prompt},
-                    ],
-                    temperature=0,
-                    max_tokens=256,
-                )
-                output = completion.choices[0].message.content.strip()
+                if client_mode == "openai" and client is not None:
+                    completion = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": "Respond in four labeled lines: Summary:, Diagnosis:, Plan:, Constraints:."},
+                            {"role": "user", "content": prompt},
+                        ],
+                        temperature=0,
+                        max_tokens=256,
+                    )
+                    output = completion.choices[0].message.content.strip()
+                else:
+                    output = _call_chat_completion_raw(api_base_url, api_key, model_name, prompt)
             except Exception as e:
                 print(f"[WARN] API inference failed on {task['task_id']} ({e}); using mock output.")
 
