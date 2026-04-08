@@ -1,8 +1,9 @@
 [project]
 name = "tutor-progress-env"
-version = "0.1.0"
+version = "0.2.0"
 description = "OpenEnv environment for evaluating AI tutors"
 authors = [{ name = "Sanjeev" }]
+requires-python = ">=3.10"
 
 dependencies = [
     "fastapi",
@@ -12,8 +13,14 @@ dependencies = [
     "openai>=1.0.0"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0"
+]
+
 [project.scripts]
 server = "server.app:main"
+evaluate = "evaluate:main"
 
 [build-system]
 requires = ["setuptools", "wheel"]

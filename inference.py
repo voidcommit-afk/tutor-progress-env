@@ -12,6 +12,12 @@ def load_tasks():
     return tasks
 
 
+def load_split_task_ids(split_name: str):
+    with open("tasks/splits.json") as f:
+        splits = json.load(f)
+    return set(splits.get(split_name, []))
+
+
 def _mock_output(task, constraints):
     expected = task.get("expected", {})
     summary_terms = expected.get("summary_points", []) or expected.get("concepts", [])
@@ -28,7 +34,15 @@ def _mock_output(task, constraints):
 
 def main():
     tasks = load_tasks()
-    env = TutorEnv(tasks)
+    seed = int(os.getenv("ENV_SEED", "42"))
+    task_split = os.getenv("TASK_SPLIT", "all").strip().lower()
+    if task_split != "all":
+        split_ids = load_split_task_ids(task_split)
+        tasks = [t for t in tasks if t["task_id"] in split_ids]
+    if not tasks:
+        raise ValueError(f"No tasks available for TASK_SPLIT='{task_split}'.")
+
+    env = TutorEnv(tasks, seed=seed)
 
     api_base_url = os.getenv("API_BASE_URL")
     model_name = os.getenv("MODEL_NAME")
@@ -99,8 +113,9 @@ def main():
         print(f"{k}: {round(v, 3)}")
 
     # also return avg
-    avg = sum(results.values()) / len(results)
+    avg = sum(results.values()) / max(1, len(results))
     print(f"\nAverage Score: {round(avg, 3)}")
+    print(f"Run Metadata: seed={seed}, split={task_split}, use_api={use_api}")
 
 
 if __name__ == "__main__":

@@ -8,194 +8,141 @@ app_file: app.py
 pinned: false
 ---
 
-## **TutorProgressEnv — Evaluating AI Tutors on Real Student Data**
+## TutorProgressEnv
 
-### Problem
+OpenEnv environment to evaluate AI tutor quality on:
+- student gap diagnosis
+- weakness identification
+- constrained study-plan generation
 
-AI tutors exist, but there is no standardized way to evaluate whether they:
+The environment is designed for robust hackathon submission behavior: fail-safe inference, required health/metadata/schema endpoints, deterministic seeding, and test/CI coverage.
 
-* truly understand student learning gaps
-* correctly diagnose weaknesses
-* generate actionable, time-constrained study plans
+## Environment API
 
-This environment simulates real academic support workflows to benchmark such capabilities.
+Core:
+- `POST /reset`
+- `POST /step`
+- `GET /state`
+- `GET /tasks`
 
----
+Validation/runtime support:
+- `GET /health`
+- `GET /metadata`
+- `GET /schema`
+- `POST /mcp`
+- `GET /session/new` (session isolation for concurrent runs)
 
-### Environment Overview
+## State and Action
 
-This OpenEnv environment models student–tutor interactions using:
+Observation includes:
+- `task_id`, `difficulty`, `chat_history`, `constraints`, `step_count`
+- `features` (structured diagnostics)
+- `session_id`
 
-* Chat history (student queries)
-* Learning context (difficulty, constraints)
-* Structured evaluation criteria
+Action:
+- `type`: `tool` or `final_answer`
+- `tool_name`: `extract_concepts` or `detect_weakness` (required when `type=tool`)
+- `content`: final response text (required when `type=final_answer`)
 
-Agents interact via:
+## Reward Design (v2)
 
-```text
-reset() → observation  
-step(action) → (observation, reward, done, info)  
-state() → current state
+Reward is clipped to `[0, 1]` and combines:
+- coverage of expected concepts/weaknesses/issues/plan-features
+- must-include terms
+- labeled structure quality (`Summary/Diagnosis/Plan/Constraints`)
+- constraint adherence (`exam_in_days`, `time_per_day`)
+- semantic proxy overlap
+- tool-use/step-efficiency bonuses
+- anti-gaming penalties:
+  - repetition/keyword-stuffing penalty
+  - contradiction penalty
+  - brevity/verbosity penalties
+
+## Reliability and Reproducibility
+
+- `inference.py` never fail-fast on missing provider vars.
+- Falls back to mock inference when provider config/API is unavailable.
+- Optional split evaluation via `TASK_SPLIT=train|validation|all`.
+- Deterministic execution via `ENV_SEED`.
+- Episode guard prevents stepping after `done=True`.
+
+## Task Splits
+
+`tasks/splits.json` defines:
+- `train`
+- `validation`
+
+Use this for consistent benchmark reporting.
+
+## Setup
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+pip install -e .[dev]
 ```
 
----
+## Submission-safe Env Config
 
-### Action / Observation Schemas
+### Option A (most reliable): Mock mode
 
-**Observation**
-
-```json
-{
-  "task_id": "string",
-  "difficulty": "easy|medium|hard",
-  "chat_history": ["..."],
-  "constraints": { "exam_in_days": 5, "time_per_day": "2 hours" },
-  "step_count": 0
-}
+```bash
+export MOCK_INFERENCE=1
+export ENV_SEED=42
 ```
 
-**Action**
+### Option B: Real provider (OpenAI-compatible, e.g. OpenAI/Groq)
 
-```json
-{
-  "type": "tool|final_answer",
-  "content": "string",
-  "tool_name": "extract_concepts|detect_weakness (optional)"
-}
+```bash
+export API_BASE_URL=<provider_base_url>
+export MODEL_NAME=<chat_model_name>
+export OPENAI_API_KEY=<provider_api_key>
+export ENV_SEED=42
 ```
 
----
+Example Groq-compatible base URL:
+- `https://api.groq.com/openai/v1`
 
-### Tasks
+### HF deployment token (for push/deploy workflows)
 
-Three difficulty levels:
-
-* **Easy** → Summarization of student understanding
-* **Medium** → Weakness & pattern detection
-* **Hard** → Constrained study plan generation
-
-Hard tasks include:
-
-* time limits (e.g., 2 hrs/day)
-* exam deadlines
-* prioritization requirements
-
----
-
-### Action Space
-
-* `tool` → use helper functions
-
-  * `extract_concepts`
-  * `detect_weakness`
-
-* `final_answer` → produce final response
-
----
-
-### Reward Design
-
-Dense reward signal (0–1):
-
-* Concept / weakness / issue detection
-* Study plan quality
-* Structural correctness
-* Verbosity penalty
-
-Additionally:
-
-* Intermediate reward for tool usage
-* Final reward based on multi-factor grading
-
----
-
-### Grading
-
-Deterministic scoring:
-
-```text
-score = weighted(keyword overlap + structure + plan features)
+```bash
+export HF_TOKEN=<your_hf_token>
 ```
 
-Breakdown includes:
-
-* concepts
-* weaknesses
-* planning quality
-* structure
-
----
-
-### Baseline
-
-The baseline inference script uses the OpenAI client to generate a deterministic response (temperature=0) for every task.
-
-Example performance:
-
-```text
-easy:   ~0.6–0.8  
-medium: ~0.5–0.7  
-hard:   ~0.4–0.6  
-```
-
----
-
-### Setup
-
-Required environment variables for inference:
-
-```text
-API_BASE_URL   # API endpoint for the LLM provider (required by checklist)
-MODEL_NAME     # Model identifier
-OPENAI_API_KEY # OpenAI-compatible API key
-HF_TOKEN       # Hugging Face token for Space deployment
-```
-
-Optional mock mode (no external API calls):
-
-```text
-MOCK_INFERENCE=1
-```
-
-Run baseline inference:
+## Run
 
 ```bash
 python inference.py
+python evaluate.py
 ```
 
-Run OpenEnv validation:
+## Validate
 
 ```bash
-openenv validate
+openenv validate --json --verbose
+pytest -q
 ```
 
----
-
-### Hugging Face Space Deployment
-
-1. Build and run locally:
+## Docker
 
 ```bash
 docker build -t tutor-progress-env .
 docker run -p 7860:7860 tutor-progress-env
 ```
 
-2. Create a Docker Space on Hugging Face and set:
-   - `HF_TOKEN`
-   - `API_BASE_URL`
-   - `MODEL_NAME`
-   - `OPENAI_API_KEY`
+## CI
 
----
+GitHub Actions (`.github/workflows/ci.yml`) runs:
+- compile checks
+- pytest
+- `openenv validate`
+- inference smoke tests in mock mode
 
-### Why This Matters
+## Round 1 Checklist
 
-Unlike toy environments, this setup:
-
-* models real-world educational workflows
-* provides interpretable reward signals
-* supports evaluation of reasoning + planning
-
-This makes it suitable for benchmarking AI tutors in edtech systems.
-
-This environment provides interpretable reward decomposition, enabling analysis of agent behavior beyond final scores.
+- [ ] `openenv validate --json --verbose` passes
+- [ ] `python inference.py` exits 0 with `MOCK_INFERENCE=1`
+- [ ] `python inference.py` exits 0 with provider env vars set
+- [ ] `python evaluate.py` produces train/validation report
+- [ ] HF Space secrets configured (`MOCK_INFERENCE` or provider vars)
