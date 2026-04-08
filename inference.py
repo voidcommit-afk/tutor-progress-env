@@ -70,6 +70,9 @@ def main():
     results = {}
 
     for task in tasks:
+        task_id = task["task_id"]
+        print(f"[START] task={task_id} split={task_split} seed={seed}", flush=True)
+
         state = env.reset(task)
 
         constraints = task.get("constraints") or {}
@@ -104,18 +107,25 @@ def main():
 
         action = Action(type="final_answer", content=output)
         res = env.step(action)
-        score = res.reward
-        results[task["task_id"]] = score
+        score = float(res.reward)
+        results[task_id] = score
+
+        step_count = res.observation.step_count
+        print(
+            f"[STEP] task={task_id} step={step_count} action=final_answer reward={score:.6f} done={str(res.done).lower()}",
+            flush=True,
+        )
+        print(f"[END] task={task_id} score={score:.6f} steps={step_count}", flush=True)
 
     # print results (required)
-    print("Baseline Results:")
+    print("Baseline Results:", flush=True)
     for k, v in results.items():
-        print(f"{k}: {round(v, 3)}")
+        print(f"{k}: {round(v, 3)}", flush=True)
 
     # also return avg
     avg = sum(results.values()) / max(1, len(results))
-    print(f"\nAverage Score: {round(avg, 3)}")
-    print(f"Run Metadata: seed={seed}, split={task_split}, use_api={use_api}")
+    print(f"\nAverage Score: {round(avg, 3)}", flush=True)
+    print(f"Run Metadata: seed={seed}, split={task_split}, use_api={use_api}", flush=True)
 
 
 if __name__ == "__main__":
