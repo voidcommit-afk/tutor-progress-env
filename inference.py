@@ -6,6 +6,9 @@ import urllib.request
 from env import TutorEnv
 from schemas import Action
 
+BENCHMARK = "tutor_progress"
+SUCCESS_SCORE_THRESHOLD = 0.5
+
 
 def load_tasks():
     tasks = []
@@ -84,7 +87,7 @@ def main():
     # Hackathon validator injects API_BASE_URL + API_KEY.
     # Prefer those names first to ensure calls are routed through the required proxy.
     api_base_url = os.getenv("API_BASE_URL") or os.getenv("OPENAI_BASE_URL")
-    api_key = os.getenv("API_KEY") or os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("API_KEY") or os.getenv("HF_TOKEN") or os.getenv("OPENAI_API_KEY")
     model_name = (
         os.getenv("MODEL_NAME")
         or os.getenv("OPENAI_MODEL")
@@ -93,7 +96,7 @@ def main():
     )
 
     mock_inference = os.getenv("MOCK_INFERENCE", "").lower() in {"1", "true", "yes", "on"}
-    proxy_mode = bool(os.getenv("API_BASE_URL") and os.getenv("API_KEY"))
+    proxy_mode = bool(os.getenv("API_BASE_URL") and (os.getenv("API_KEY") or os.getenv("HF_TOKEN")))
     missing = [k for k, v in {
         "API_BASE_URL": api_base_url,
         "API_KEY": api_key,
@@ -125,7 +128,7 @@ def main():
 
     for task in tasks:
         task_id = task["task_id"]
-        print(f"[START] task={task_id} split={task_split} seed={seed}", flush=True)
+        print(f"[START] task={task_id} env={BENCHMARK} model={model_name}", flush=True)
 
         state = env.reset(task)
 
@@ -166,13 +169,19 @@ def main():
         res = env.step(action)
         score = float(res.reward)
         results[task_id] = score
+        rewards = [score]
 
         step_count = res.observation.step_count
         print(
-            f"[STEP] task={task_id} step={step_count} action=final_answer reward={score:.6f} done={str(res.done).lower()}",
+            f"[STEP] step={step_count} action=final_answer reward={score:.2f} done={str(res.done).lower()} error=null",
             flush=True,
         )
-        print(f"[END] task={task_id} score={score:.6f} steps={step_count}", flush=True)
+        success = score >= SUCCESS_SCORE_THRESHOLD
+        rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+        print(
+            f"[END] task={task_id} success={str(success).lower()} steps={step_count} score={score:.3f} rewards={rewards_str}",
+            flush=True,
+        )
 
     # print results (required)
     print("Baseline Results:", flush=True)
