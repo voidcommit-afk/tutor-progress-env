@@ -9,11 +9,13 @@ class TutorEnv:
         self.current = None
         self.step_count = 0
         self.tool_output = None
+        self.episode_done = False
 
     def reset(self, task):
         self.current = task
         self.step_count = 0
         self.tool_output = None
+        self.episode_done = False
 
         return Observation(
             task_id=task["task_id"],
@@ -26,6 +28,8 @@ class TutorEnv:
     def step(self, action: Action):
         if self.current is None:
             raise ValueError("Environment not initialized. Call reset() first.")
+        if self.episode_done:
+            raise ValueError("Episode already finished. Call reset() before calling step() again.")
 
         self.step_count += 1
 
@@ -65,6 +69,7 @@ class TutorEnv:
                 self.current["expected"],
                 constraints=self.current.get("constraints")
             )
+            self.episode_done = True
 
             obs = Observation(
                 task_id=self.current["task_id"],
